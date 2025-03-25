@@ -1,0 +1,10 @@
+{
+    "Apps": {
+        "sqlite": "sqlite3",
+        "mysql": "mysql",
+        "psql": "psql"
+    },
+    "DefaultApp": "sqlite",
+    "MaxItems": 200
+}
+
