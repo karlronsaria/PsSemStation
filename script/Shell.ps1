@@ -1,3 +1,5 @@
+. "$PsScriptRoot/Command.ps1"
+
 class SemBatch {
     [string[]] $Items
     [string] $Command
@@ -88,27 +90,27 @@ function Run-SemShellCommand {
             $words = switch ($PreboundParameters['Command'].ToLower()) {
                 'pool' {
                     "SELECT name FROM item;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
                 }
 
                 'tag' {
                     "SELECT name FROM tag;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
                 }
 
                 'untag' {
                     "SELECT name FROM tag;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
                 }
 
                 'date' {
                     "SELECT DISTINCT datetag FROM item_has_datetag;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
                 }
 
                 'undate' {
                     "SELECT DISTINCT datetag FROM item_has_datetag;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
                 }
 
                 'batch' {
@@ -248,7 +250,7 @@ function Run-SemShellCommand {
                     }
 
                     "SELECT DISTINCT $col FROM item;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
 
                     break
                 }
@@ -280,21 +282,21 @@ function Run-SemShellCommand {
             $words = switch ($PreboundParameters['Argument3'].ToLower()) {
                 'tag' {
                     "SELECT name FROM tag ORDER BY name;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
 
                     break
                 }
 
                 'date' {
                     "SELECT DISTINCT datetag FROM item_has_tagtag ORDER BY datetag;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
 
                     break
                 }
 
                 'name' {
                     "SELECT name FROM item ORDER BY name;" |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                        Invoke-SemDbRequest
 
                     break
                 }
@@ -791,6 +793,7 @@ function Run-SemShellCommand {
             [SemBatch]::Batches += @([SemBatch]::new())
         }
 
+        [DbRequest]::BuildDefault()
         $batch = [SemBatch]::Batches[[SemBatch]::Index]
         $nextBatch = [SemBatch]::new()
         $itemsList = @()
@@ -998,8 +1001,7 @@ LEFT JOIN tag
                             }
 
                             if (-not $all) {
-                                $rows = "$from $where;" |
-                                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                                $rows = "$from $where;" | Invoke-SemDbRequest
 
                                 $rows | foreach {
                                     [Item]::Marshall($_)
@@ -1011,7 +1013,7 @@ LEFT JOIN tag
 
                         'tag' {
                             $result = "SELECT * FROM tag ORDER BY name;" |
-                                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                                Invoke-SemDbRequest
 
                             foreach ($row in $result) {
                                 $cols = $row.Split('|')
@@ -1031,8 +1033,7 @@ SELECT DISTINCT datetag
 FROM item_has_datetag ORDER BY datetag;
 @"
 
-                            $result = $query |
-                                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                            $result = $query | Invoke-SemDbRequest
 
                             foreach ($row in $result) {
                                 [pscustomobject]@{

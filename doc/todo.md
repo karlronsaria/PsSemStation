@@ -1,7 +1,9 @@
 # todo
 
+- [ ] dbrequest type to wrap db manager calls
+  - not quite a db connector; if I call it that, it will probably be embarrassing
 - [ ] idea
-  - 'es could not find the file '...' on your device. Possible candidates include (using fzf).'
+  - "es could not find the file '...' on your device. Possible candidates include (using fzf)."
 - [ ] consider: default order-by clause
 - [x] rename batch type
 - [x] sem pool
