@@ -8,6 +8,6 @@ function New-SemItemName {
         $Extension = '.md'
     )
 
-    return "$($Prefix)_-_$(Get-Date -Format yyyy-MM-dd-HHmmss-fff)$Extension"
+    return "$($Prefix)_-_$(Get-Date -Format yyyy-MM-dd-HHmmss-fff)$Extension" # Uses DateTimeFormat
 }
 
