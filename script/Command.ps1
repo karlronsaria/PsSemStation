@@ -1,3 +1,5 @@
+. "$PsScriptRoot/DbRequest.ps1"
+
 class Item {
     hidden [int] $Id
     hidden [string] $Description
@@ -53,7 +55,7 @@ function Get-SemItem {
             Param($A, $B, $C)
 
             $results = "SELECT DISTINCT name FROM item ORDER BY name;" |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                Invoke-SemDbRequest
 
             $suggest = $results | where {
                 $_ -like "$C*"
@@ -74,7 +76,7 @@ function Get-SemItem {
             Param($A, $B, $C)
 
             $results = "SELECT DISTINCT name FROM tag ORDER BY name;" |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                Invoke-SemDbRequest
 
             return $results
 
@@ -97,7 +99,7 @@ function Get-SemItem {
             Param($A, $B, $C)
 
             $results = "SELECT DISTINCT datetag FROM item_has_datetag ORDER BY datetag;" |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                Invoke-SemDbRequest
 
             $suggest = $results | where {
                 $_ -like "$C*"
@@ -241,7 +243,7 @@ WHERE
             }
         }
 
-        $result = $query | sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        $result = $query | Invoke-SemDbRequest
 
         foreach ($item in $result) {
             $row = $item.Split('|')
@@ -283,7 +285,7 @@ FROM item_has_datetag
 WHERE datetag IN ($(($datetags | foreach { "'$_'" }) -join ', '));
 "@
 
-        return $query | sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        return $query | Invoke-SemDbRequest
     }
 }
 
@@ -308,7 +310,7 @@ function Test-SemTag {
 SELECT name FROM tag WHERE name IN ($(($tags | foreach { "'$_'" }) -join ', '));
 "@
 
-        return $query | sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        return $query | Invoke-SemDbRequest
     }
 }
 
@@ -377,7 +379,7 @@ WHERE name IN ($(($query | foreach { "'$_'" }) -join ', '));
             }
         }
 
-        return $query | sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        return $query | Invoke-SemDbRequest
     }
 }
 
@@ -387,7 +389,7 @@ function Start-SemDb {
         $Force
     )
 
-    $dbPath = "$PsScriptRoot/../res/$($global:semDbName).db"
+    $dbPath = [DbRequest]::RecentDbPath() # "$PsScriptRoot/../res/$($global:semDbName).db"
     $dbExists = Test-Path $dbPath
 
     if ($dbExists) {
@@ -395,12 +397,12 @@ function Start-SemDb {
             rm $dbPath -Force
         }
         else {
-            return "Database '$($global:semDbName).db' already exists"
+            return "Database '$([DbRequest]::Recent.DbName).db' already exists"
         }
     }
 
-    gc "$PsScriptRoot/../sql/new-semantic-system-db.sqlite.sql" |
-        sqlite3 $dbPath
+    Get-Content "$PsScriptRoot/../sql/new-semantic-system-db.sqlite.sql" |
+        Invoke-SemDbRequest
 }
 
 function Add-SemDateTag {
@@ -413,7 +415,7 @@ function Add-SemDateTag {
             Param($A, $B, $C)
 
             $results = "SELECT DISTINCT datetag FROM item_has_datetag ORDER BY datetag;" |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                Invoke-SemDbRequest
 
             $suggest = $results | where {
                 $_ -like "$C*"
@@ -444,8 +446,7 @@ function Add-SemDateTag {
 SELECT itemid FROM item_has_datetag WHERE itemid = $itemId AND datetag = '$tag';
 "@
 
-                $itemHasTag = $testQuery |
-                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                $itemHasTag = $testQuery | Invoke-SemDbRequest
 
                 if ($itemHasTag) {
                     "Item '$($item.name)' already has date tag '$tag'"
@@ -456,8 +457,7 @@ INSERT INTO item_has_datetag (itemid, datetag) VALUES ('$itemId', '$tag');
 SELECT last_insert_rowid();
 "@
 
-                    $id = $command |
-                        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                    $id = $command | Invoke-SemDbRequest
 
                     if ($null -eq $id) {
                         return
@@ -484,7 +484,7 @@ function Add-SemTag {
             Param($A, $B, $C)
 
             $results = "SELECT DISTINCT name FROM tag ORDER BY name;" |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                Invoke-SemDbRequest
 
             $suggest = $results | where {
                 $_ -like "$C*"
@@ -508,7 +508,7 @@ function Add-SemTag {
             select -Unique |
             foreach {
                 $id = "SELECT id FROM tag WHERE name = '$_';" |
-                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                    Invoke-SemDbRequest
 
                 if ($null -eq $id) {
                     $command = @"
@@ -516,7 +516,7 @@ INSERT INTO tag (name, created) VALUES ('$_', date('now'));
 SELECT last_insert_rowid();
 "@
 
-                    $id = $command | sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                    $id = $command | Invoke-SemDbRequest
                 }
 
                 [pscustomobject]@{
@@ -539,8 +539,7 @@ SELECT last_insert_rowid();
 SELECT itemid FROM item_has_tag WHERE itemid = $itemId AND tagid = $($tagObject.id);
 "@
 
-            $itemHasTag = $testQuery |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+            $itemHasTag = $testQuery | Invoke-SemDbRequest
 
             if ($itemHasTag) {
                 "Item '$($InputObject.name)' already has tag '$($tagObject.name)'"
@@ -551,8 +550,7 @@ INSERT INTO item_has_tag (itemid, tagid) VALUES ('$itemId', '$($tagObject.id)');
 SELECT last_insert_rowid();
 "@
 
-                $id = $command |
-                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                $id = $command | Invoke-SemDbRequest
 
                 if ($null -eq $id) {
                     return
@@ -586,7 +584,7 @@ function New-SemItem {
         $rows += $Name |
             where {
                 $result = "SELECT id FROM item WHERE name = '$_';" |
-                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                    Invoke-SemDbRequest
 
                 $null -eq $result
             } |
@@ -611,8 +609,7 @@ INSERT INTO item (name, description, created) VALUES $rows;
 SELECT changes();
 "@
 
-        $result = $command |
-            sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        $result = $command | Invoke-SemDbRequest
 
         if ($null -eq $result) {
             return
@@ -628,7 +625,7 @@ SELECT changes();
 
 function Get-SemStaleTag {
     $result = "SELECT id, name, created FROM tag WHERE id NOT IN (SELECT tagid FROM item_has_tag);" |
-        sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        Invoke-SemDbRequest
 
     $row = $result.Split('|')
 
@@ -706,7 +703,7 @@ WHERE
 "@
 
         $query |
-            sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db" |
+            Invoke-SemDbRequest |
             foreach {
                 $row = $_.Split('|')
 
@@ -777,8 +774,7 @@ WHERE
 ;
 "@
 
-        $query |
-            sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+        $query | Invoke-SemDbRequest
     }
 }
 
@@ -829,8 +825,7 @@ SELECT name FROM tag;
 "@
             }
 
-            $tags = $query |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+            $tags = $query | Invoke-SemDbRequest
 
             $suggest = $tags | where {
                 $_ -like "$C*"
@@ -853,7 +848,7 @@ SELECT name FROM tag;
             select -Unique |
             foreach {
                 $id = "SELECT id FROM tag WHERE name = '$_';" |
-                    sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+                    Invoke-SemDbRequest
 
                 if ($null -eq $id) {
                     Write-Verbose "Tag '$_' not found"
@@ -880,8 +875,7 @@ DELETE FROM item_has_tag WHERE itemid = $itemId AND tagid = $($tagObject.id);
 SELECT changes();
 "@
 
-            $command |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+            $command | Invoke-SemDbRequest
         }
     }
 }
@@ -929,8 +923,7 @@ SELECT datetag FROM item_has_datetag;
 "@
             }
 
-            $tags = $query |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+            $tags = $query | Invoke-SemDbRequest
 
             $suggest = $tags | where {
                 $_ -like "$C*"
@@ -960,8 +953,7 @@ DELETE FROM item_has_datetag WHERE itemid = $itemid AND datetag = '$subtag';"
 SELECT changes();
 "@
 
-            $command |
-                sqlite3 "$PsScriptRoot/../res/$($global:semDbName).db"
+            $command | Invoke-SemDbRequest
         }
     }
 }

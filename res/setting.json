@@ -5,6 +5,9 @@
         "psql": "psql"
     },
     "DefaultApp": "sqlite",
-    "MaxItems": 200
+    "MaxItems": 200,
+    "Local": "$PsScriptRoot/../res",
+    "DbName": "my",
+    "Manager": "sqlite"
 }
 
