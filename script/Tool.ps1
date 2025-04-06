@@ -1,4 +1,4 @@
-New-SemItemName {
+function New-SemItemName {
     [Alias('Semuid')]
     Param(
         [string]
