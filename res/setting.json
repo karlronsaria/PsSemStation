@@ -8,6 +8,8 @@
     "MaxItems": 200,
     "Local": "$PsScriptRoot/../res",
     "DbName": "my",
-    "Manager": "sqlite"
+    "Manager": "sqlite",
+    "DefaultSourceDirectoryExpr": "$($env:AppData)\\PFU\\ScanSnap Home\\ScanSnap Home\\__WORKLIST",
+    "DefaultExtension": ".pdf"
 }
 

@@ -43,14 +43,52 @@ function New-SemItemName {
     }
 }
 
+<#
+.DESCRIPTION
+Requires: gswin64, popplers
+#>
 function New-SemMarkdownItem {
+    [CmdletBinding(DefaultParameterSetName = 'Batch')]
     Param(
-        [Parameter(ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'Single',
+            ValueFromPipeline = $true
+        )]
         $InputObject,
 
+        [Parameter(
+            ParameterSetName = 'Single'
+        )]
         [string]
         $WorkingDirectory = (Get-Location)
     )
+
+    Begin {
+        function Compare-WorklistItem {
+            Param(
+                $Source,
+                $Destination
+            )
+
+            $pageCount = Get-SemPdfPageCount -FilePath $Source
+
+            $imageCount = Get-Content $Destination |
+                Select-String "^\s*!\[" |
+                Measure-Object |
+                foreach Count
+
+            $success = $pageCount -eq $imageCount
+
+            if (-not $success) {
+                [pscustomobject]@{
+                    Srce = (Get-Item $Source).Name
+                    Pages = $pageCount
+                    Dest = (Get-Item $Destination).Name
+                    Images = $imageCount
+                }
+            }
+        }
+    }
 
     Process {
         dir $InputObject |
@@ -61,9 +99,8 @@ function New-SemMarkdownItem {
                 $_.FullName.
                 Replace($WorkingDirectory, '') |
                 Split-Path -Parent |
-                foreach { $_ -split '\\' } |
-                foreach { $_ -split ',' } |
-                where { $_ } |
+                foreach { $_ -split '/|\\|,' } |
+                where { $_ -and $_ -notlike "__*" } |
                 foreach {
                     # Uses DateTimeFormat
                     if ($_ -match "^\d{4}(-\d{2}(-d{2})?)?$") {
@@ -80,6 +117,58 @@ function New-SemMarkdownItem {
                     -Dates $dates `
             }
     }
+
+    End {
+        switch ($PsCmdlet.ParameterSetName) {
+            'Batch' {
+                $setting = Get-Item "$PsScriptRoot/../res/setting.json" |
+                    Get-Content |
+                    ConvertFrom-Json
+
+                $sourceDirectory = iex "`"$($setting.DefaultSourceDirectoryExpr)`""
+                $extension = $setting.DefaultExtension
+                $files = Get-ChildItem "$sourceDirectory/*$extension" -Recurse
+
+                $files |
+                foreach -Begin {
+                    $count = 0
+                } -Process {
+                    Write-Progress `
+                        -Activity 'Converting item' `
+                        -Status "($($count + 1) of $($files.Count)) $($_.Name)" `
+                        -PercentComplete (100 * $count / $files.Count)
+
+                    $outFile = $_ | New-SemMarkdownItem -WorkingDirectory $sourceDirectory
+
+                    Compare-WorklistItem `
+                        -Source $_ `
+                        -Destination $outFile
+
+                    $count = $count + 1
+                }
+
+                Write-Progress `
+                    -Activity 'Converting item' `
+                    -Completed
+            }
+        }
+    }
+}
+
+<#
+.DESCRIPTION
+Requires: popplers
+#>
+function Get-SemPdfPageCount {
+    [OutputType([int])]
+    Param(
+        [string]
+        $FilePath
+    )
+
+    pdfinfo "$FilePath" |
+    Select-String "(?<=Pages:\s+)\d+" |
+    foreach { [int] $_.Matches.Value }
 }
 
 function ConvertTo-SemMarkdownItem {
@@ -161,10 +250,14 @@ $datetagStr
 $localsStr
 "@
 
+            $outFileName = "item_-_$dtstr.md"
+
             $markdown | Out-File `
-                -FilePath "item_-_$dtstr.md" `
+                -FilePath $outFileName `
                 -Encoding utf8 `
                 -Force
+
+            Get-Item $outFileName
         }
     }
 }
