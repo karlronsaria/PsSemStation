@@ -1,3 +1,22 @@
+function Rename-SemItem {
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        $InputObject,
+
+        [string]
+        $Prefix = 'item'
+    )
+
+    Process {
+        Get-Item $InputObject |
+        foreach {
+            $dt = $_.LastWriteTime
+            $dtstr = $dt | Get-Date -f yyyy-MM-dd-HHmmss-fff # Uses DateTimeFormat
+            Rename-Item $_ "$($Prefix)_-_$dtstr$($_.Extension)"
+        }
+    }
+}
+
 function New-SemItemName {
     [CmdletBinding(DefaultParameterSetName = 'NoInput')]
     [Alias('Semuid')]
