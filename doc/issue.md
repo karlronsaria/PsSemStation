@@ -1,5 +1,11 @@
 # issue
 
+- [ ] 2025-04-09-012546
+  - lack of quality control when stacked documents detected
+- [ ] 2025-04-09-021818
+  - actual
+    - full-size scans have streak along the first page
+
 ## resolved
 
 - [x] 2025-03-24-190458
